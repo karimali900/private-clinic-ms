@@ -1,107 +1,65 @@
-; Inno Setup Script — Obstetrics Management System Installer
+; Inno Setup Script — Private Clinic OMS Installer
 ; Created by Karim Abdelaziz — 00201029927276
-; To compile: right-click and "Compile" with Inno Setup, or:
-;   iscc OMS_installer.iss
+; Build with Inno Setup (https://jrsoftware.org/isinfo.php)
 
-#define MyAppName "Obstetrics Management System"
-#define MyAppShortName "OMS"
+#define MyAppName "Private Clinic — Obstetrics Management"
 #define MyAppVersion "2.0.0"
 #define MyAppPublisher "Karim Abdelaziz"
-#define MyAppURL ""
+#define MyAppURL "https://github.com/karimali900/private-clinic-ms"
 #define MyAppExeName "OMS.exe"
 #define MyAppAssocName "OMS Database"
 #define MyAppAssocExt ".db"
 
 [Setup]
-; Basic
-AppId={{B8F7A3D2-1C4E-4A5B-9D0F-6E2C8A7B3D1F}
+AppId={{D8F2E3A1-5B7C-4A9E-8F6D-2C1B3A5E7F90}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
-AppSupportURL={#MyAppURL}
-AppUpdatesURL={#MyAppURL}
-
-; Destination
-DefaultDirName={autopf}\{#MyAppShortName}
-DefaultGroupName={#MyAppShortName}
+DefaultDirName={autopf}\Private Clinic OMS
+DefaultGroupName="Private Clinic OMS"
 DisableProgramGroupPage=yes
-AllowNoIcons=yes
-
-; Output
 OutputDir=installer
-OutputBaseFilename=OMS_Setup_v{#MyAppVersion}
-SetupIconFile=icon.ico
-UninstallDisplayIcon={app}\{#MyAppExeName}
-Compression=lzma2/ultra
+OutputBaseFilename=PrivateClinic_OMS_Setup_v{#MyAppVersion}
+Compression=lzma
 SolidCompression=yes
-LZMAUseSeparateProcess=yes
-DiskSpanning=no
-
-; Permissions
-PrivilegesRequired=admin
-PrivilegesRequiredOverridesAllowed=dialog
-
-; Visual
 WizardStyle=modern
-WizardSmallImageFile=icon.bmp
-WizardImageFile=side.bmp
+PrivilegesRequired=admin
+SetupIconFile=data\logos\default.jpg
+UninstallDisplayIcon={app}\OMS.exe
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "arabic"; MessagesFile: "compiler:Languages\Arabic.isl"
 
 [Tasks]
-Name: "desktopicon"; Description: "Create a &desktop shortcut"; GroupDescription: "Additional shortcuts:"; Flags: checkedonce
+Name: "desktopicon"; Description: "Create a &desktop shortcut"; GroupDescription: "Additional icons:"
 
 [Files]
-Source: "dist\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "dist\data\*"; DestDir: "{app}\data"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "dist\start.bat"; DestDir: "{app}"; Flags: ignoreversion
-Source: "dist\README.txt"; DestDir: "{app}"; Flags: ignoreversion
-Source: "icon.ico"; DestDir: "{app}"; Flags: ignoreversion
+Source: "dist\OMS.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "data\*"; DestDir: "{app}\data"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "start.bat"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{autoprograms}\{#MyAppShortName}"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"
-Name: "{autodesktop}\{#MyAppShortName}"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"; Tasks: desktopicon
-Name: "{autoprograms}\{#MyAppShortName} (Data Folder)"; Filename: "{app}\data"; WorkingDir: "{app}"
+Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"
+Name: "{autoprograms}\Private Clinic OMS\Data Folder"; Filename: "{app}\data"
+Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon; WorkingDir: "{app}"
 
 [Run]
-Filename: "{app}\{#MyAppExeName}"; Description: "Launch {#MyAppName}"; Flags: nowait postinstall skipifsilent shellexec
+Filename: "{app}\{#MyAppExeName}"; Description: "Launch {#MyAppName}"; Flags: nowait postinstall skipifsilent
 
 [UninstallRun]
-Filename: "{cmd}"; Parameters: "/c taskkill /f /im {#MyAppExeName} 2>nul"; Flags: runhidden
-
-[Registry]
-; Associate .omsdb files (optional)
-Root: HKA; Subkey: "Software\Classes\.omsdb\OpenWithProgids"; ValueType: string; ValueName: "{#MyAppAssocName}"; ValueData: ""; Flags: uninsdeletevalue
-Root: HKA; Subkey: "Software\Classes\{#MyAppAssocName}"; ValueType: string; ValueName: ""; ValueData: "{#MyAppAssocName}"; Flags: uninsdeletekey
-Root: HKA; Subkey: "Software\Classes\{#MyAppAssocName}\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\{#MyAppExeName},0"
-Root: HKA; Subkey: "Software\Classes\{#MyAppAssocName}\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#MyAppExeName}"" ""%1"""
-
-; Firewall rule for port 5000
-Root: HKLM; Subkey: "SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules"; ValueType: string; ValueName: "OMS_Port_5000"; ValueData: "v2.30|Action=Allow|Active=TRUE|Dir=In|Protocol=6|Profile=Private|LPort=5000|App={app}\{#MyAppExeName}|Name=OMS Local Server (Port 5000)|Desc=Allow OMS to communicate on local network"; Flags: uninsdeletevalue
+Filename: "{cmd}"; Parameters: "/c taskkill /IM OMS.exe /F /T"; Flags: runhidden
 
 [Code]
-procedure InitializeWizard();
+function InitializeSetup: Boolean;
 begin
-  WizardForm.LicenseMemo.Font.Color := clGreen;
-  WizardForm.LicenseMemo.Font.Size := 9;
-end;
-
-function ShouldSkipPage(PageID: Integer): Boolean;
-begin
-  Result := False;
-end;
-
-procedure CurStepChanged(CurStep: TSetupStep);
-begin
-  if CurStep = ssPostInstall then
+  if not FileExists(ExpandConstant('{src}\dist\OMS.exe')) then
   begin
-    // Ensure data directory is writable
-  end;
+    MsgBox('OMS.exe not found!' + #13#10 +
+           'Please run build.bat first to compile the executable.', mbError, MB_OK);
+    Result := False;
+  end
+  else
+    Result := True;
 end;
-
-[CustomMessages]
-english.LaunchAfterInstall=Launch Obstetrics Management System
-arabic.LaunchAfterInstall=تشغيل نظام إدارة التوليد
