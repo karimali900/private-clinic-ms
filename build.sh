@@ -6,15 +6,10 @@ DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$DIR"
 
 echo ">> Installing dependencies..."
-pip install pyinstaller pyarmor 2>/dev/null || true
+pip install pyinstaller 2>/dev/null || true
 
 echo ""
-echo ">> Obfuscating source code with PyArmor..."
-pyarmor gen --output obf_dist --recursive run.py Cloud_API.py database.py classification.py Postpartum.py 2>/dev/null
-
-echo ""
-echo ">> Building executable with PyInstaller..."
-cd obf_dist
+echo ">> Building executable with PyInstaller (compiled .pyc — source protected)..."
 pyinstaller --clean --noconfirm --onefile --windowed \
   --name "OMS" \
   --add-data "data:data" \
@@ -38,17 +33,20 @@ pyinstaller --clean --noconfirm --onefile --windowed \
   --hidden-import "database" \
   --hidden-import "multipart" \
   --hidden-import "multipart.multipart" \
+  --hidden-import "sklearn" \
+  --hidden-import "sklearn.ensemble" \
+  --hidden-import "sklearn.tree" \
+  --hidden-import "sklearn.preprocessing" \
+  --hidden-import "pandas" \
+  --hidden-import "numpy" \
   --exclude-module "tkinter" \
   --exclude-module "matplotlib" \
   --exclude-module "scipy" \
-  --exclude-module "numpy" \
-  --exclude-module "pandas" \
   --exclude-module "PIL" \
   run.py
 
-cd "$DIR"
 mkdir -p dist_linux/data
-cp obf_dist/dist/OMS dist_linux/
+cp dist/OMS dist_linux/
 cp -r data/* dist_linux/data/
 cp start.sh dist_linux/
 cp README.txt dist_linux/

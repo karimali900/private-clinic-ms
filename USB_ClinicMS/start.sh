@@ -62,8 +62,13 @@ case "$OS" in
     *)       xdg-open "http://localhost:5000/dashboard" 2>/dev/null || true ;;
 esac
 
-# ── Run main setup + server (handles venv + deps) ──
-$PYTHON_CMD run.py
+# ── Run compiled binary if present, else source ──
+if [ -f "./OMS" ]; then
+    chmod +x ./OMS 2>/dev/null
+    exec ./OMS
+else
+    $PYTHON_CMD run.py
+fi
 
 echo ""
 read -p " Press Enter to exit..."

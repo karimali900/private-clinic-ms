@@ -919,6 +919,7 @@ tr:hover td{background:#1a1a3a}
 <div class="login-overlay" id="loginOverlay">
   <div class="login-box">
     <div class="logo">🏥</div>
+    <img id="loginLogo" src="" style="max-width:120px;max-height:120px;margin:0 auto .5rem;display:none;border-radius:8px">
     <h2 id="lgnTitle">Private Clinic — Obstetrics Management</h2>
     <p class="tagline" id="lgnTagline">Maternity Care · Antenatal Visits · Follow-ups</p>
     <div class="fields">
@@ -955,6 +956,7 @@ tr:hover td{background:#1a1a3a}
 </div>
 <div class="layout" id="appLayout" style="display:none">
   <nav class="sidebar">
+    <img id="sidebarLogo" src="" style="max-width:100px;max-height:80px;margin:.5rem auto;display:none;border-radius:6px">
     <h2>🏥 OMS</h2>
     <div class="nav-item active" data-tab="dashboard" onclick="switchTab('dashboard')"><span class="ico">📊</span><span>Dashboard</span></div>
     <div class="nav-item" data-tab="patients" onclick="switchTab('patients')"><span class="ico">👤</span><span>Patients</span></div>
@@ -1437,6 +1439,12 @@ tr:hover td{background:#1a1a3a}
       </div>
       <button class="btn btn-primary" onclick="updateBranding()">Update Branding / تحديث</button>
       <div id="brandingMessage" style="font-size:.7rem;margin-top:.4rem"></div>
+      <div style="margin-top:.8rem">
+        <label style="font-size:.75rem;color:#999">Upload Logo / رفع الشعار</label>
+        <input id="logoUpload" type="file" accept="image/*" style="display:block;margin:.3rem 0;font-size:.75rem">
+        <button class="btn btn-primary" onclick="uploadLogo()">Upload Logo / رفع</button>
+        <div id="logoMessage" style="font-size:.7rem;margin-top:.4rem"></div>
+      </div>
     </div>
   </div>
   <script>
@@ -1450,6 +1458,20 @@ tr:hover td{background:#1a1a3a}
         });
         document.getElementById('brandingMessage').innerHTML='<span style="color:#3ba55c">Branding updated!</span>';
       }catch(e){document.getElementById('brandingMessage').innerHTML='<span style="color:#ed4245">Error: '+e.message+'</span>';}
+    }
+    async function uploadLogo(){
+      const code=document.getElementById('brandFacCode').value;
+      if(!code){alert('Enter facility code');return}
+      const fileInput=document.getElementById('logoUpload');
+      if(!fileInput.files.length){alert('Select an image');return}
+      const fd=new FormData();
+      fd.append('facility_code',code);
+      fd.append('file',fileInput.files[0]);
+      try{
+        const j=await fetch('/api/upload-logo',{method:'POST',body:fd,headers:{'Authorization':'Bearer '+localStorage.getItem('token')}}).then(r=>r.json());
+        document.getElementById('logoMessage').innerHTML='<span style="color:#3ba55c">Logo uploaded!</span>';
+        loadBranding();
+      }catch(e){document.getElementById('logoMessage').innerHTML='<span style="color:#ed4245">Error: '+e.message+'</span>';}
     }
     async function addNewFacility(){
       const code=document.getElementById('facCode').value;
@@ -2142,14 +2164,27 @@ async function loadBranding(){
     const j=await api('/api/facilities/'+fc+'/branding');
     const bn=j.branding_name||j.facility_name||'';
     const sp=j.support_phone||'';
+    const logoPath=j.branding_logo_path||'';
     if(bn||sp){
       const txt=bn+(sp?' &mdash; '+sp:'');
-      const el=document.getElementById('loginBranding');if(el)el.innerHTML=txt;
-      const el2=document.getElementById('sidebarBranding');if(el2)el2.innerHTML=txt;
-      const el3=document.getElementById('footerBranding');if(el3)el3.innerHTML=txt;
+      const el=document.getElementById('loginBranding');if(el){el.innerHTML=txt;el.dataset.enText=txt}
+      const el2=document.getElementById('sidebarBranding');if(el2){el2.innerHTML=txt;el2.dataset.enText=txt}
+      const el3=document.getElementById('footerBranding');if(el3){el3.innerHTML=txt;el3.dataset.enText=txt}
     }
     if(bn){
-      const dt=document.getElementById('dashTitle');if(dt)dt.innerHTML='🏥 '+bn;
+      const dt=document.getElementById('dashTitle');if(dt){dt.innerHTML='🏥 '+bn;dt.dataset.enText=bn}
+    }
+    // Show logo
+    const ll=document.getElementById('loginLogo');
+    const sl=document.getElementById('sidebarLogo');
+    if(logoPath){
+      if(ll){ll.src=logoPath;ll.style.display='block'}
+      if(sl){sl.src=logoPath;sl.style.display='block'}
+    }else{
+      // Try default logo
+      const defLogo='/data/logos/default.jpg';
+      if(ll){ll.src=defLogo;ll.style.display='block'}
+      if(sl){sl.src=defLogo;sl.style.display='block'}
     }
   }catch(e){/* branding fallback silently */}
 }
@@ -2193,7 +2228,7 @@ function translateContent(){
 
 
 function autoTranslateAll(){
-  const sel = 'h1,h2,h3,h4,h5,label,button,th,span:not(.ico),p,.tab,.sub,option,dt,dd,legend';
+  const sel = 'h1,h2,h3,h4,h5,label,button,th,span:not(.ico),p,.tab,.sub,option,dt,dd,legend,div';
   const en = LANG.en;
   const ar = LANG.ar || {};
   if(currentLang==='en'){
@@ -3489,6 +3524,23 @@ async def update_facility_branding(code: str, body: dict, token: dict = Depends(
     if data:
         update_facility(code, data)
     return {"status": "success", "message": "Branding updated"}
+
+import os as _os_logo
+LOGOS_DIR = _os_logo.path.join(_os_logo.path.dirname(__file__), "data", "logos")
+
+@app.post("/api/upload-logo")
+async def upload_logo(facility_code: str = Form(...), file: UploadFile = File(...), token: dict = Depends(verify_token)):
+    if token.get("role") != "admin":
+        raise HTTPException(403, "Admin access required")
+    ext = _os_logo.path.splitext(file.filename)[1] or ".jpg"
+    fname = f"{facility_code}{ext}"
+    fpath = _os_logo.path.join(LOGOS_DIR, fname)
+    with open(fpath, "wb") as f:
+        content = await file.read()
+        f.write(content)
+    logo_url = f"/data/logos/{fname}"
+    update_facility(facility_code, {"branding_logo_path": logo_url})
+    return {"status": "success", "logo_url": logo_url}
 
 
 # ── Referral endpoints ──

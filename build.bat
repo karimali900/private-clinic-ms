@@ -13,14 +13,14 @@ pip install pyinstaller pyarmor pyarmor.cli 2>nul
 
 echo.
 echo ^>^> Obfuscating source code with PyArmor...
-pyarmor gen --output obf_dist --recursive run.py Cloud_API.py database.py classification.py Postpartum.py 2>nul
+pyarmor gen --output obf_dist --recursive run.py Cloud_API.py database.py classification.py Postpartum.py maternal_fetal.py 2>nul
 
 echo.
-echo ^>^> Building executable with PyInstaller (from obfuscated source)...
+echo ^>^> Building executable with PyInstaller...
 cd obf_dist
 pyinstaller --clean --noconfirm --onefile --windowed ^
   --name "OMS" ^
-  --add-data "data;data" ^
+  --add-data "../data;data" ^
   --hidden-import passlib.handlers.pbkdf2_sha256 ^
   --hidden-import passlib.handlers.sha2_crypt ^
   --hidden-import uvicorn ^
@@ -41,11 +41,15 @@ pyinstaller --clean --noconfirm --onefile --windowed ^
   --hidden-import database ^
   --hidden-import multipart ^
   --hidden-import multipart.multipart ^
+  --hidden-import sklearn ^
+  --hidden-import sklearn.ensemble ^
+  --hidden-import sklearn.tree ^
+  --hidden-import sklearn.preprocessing ^
+  --hidden-import pandas ^
+  --hidden-import numpy ^
   --exclude-module tkinter ^
   --exclude-module matplotlib ^
   --exclude-module scipy ^
-  --exclude-module numpy ^
-  --exclude-module pandas ^
   --exclude-module PIL ^
   --exclude-module cv2 ^
   run.py
@@ -59,6 +63,7 @@ if %ERRORLEVEL% NEQ 0 (
 
 echo.
 echo ^>^> Copying files to dist folder...
+cd "%DIR%"
 if not exist "dist\data" mkdir "dist\data"
 xcopy /E /I /Y "data" "dist\data" 2>nul
 copy "start.bat" "dist\start.bat" 2>nul
@@ -68,8 +73,6 @@ echo.
 echo ====================================================
 echo  BUILD COMPLETE!
 echo  Output: dist\OMS.exe
-echo  Size:
-dir "dist\OMS.exe"
 echo ====================================================
 echo.
 echo  Created by Karim Abdelaziz
