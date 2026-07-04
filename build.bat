@@ -1,6 +1,6 @@
 @echo off
 REM =====================================================
-REM  Build OMS — Obstetrics Management System Installer
+REM  Build OMS — Obstetrics Management System
 REM  Created by Karim Abdelaziz — 00201029927276
 REM =====================================================
 title Building OMS Package...
@@ -8,19 +8,19 @@ title Building OMS Package...
 set DIR=%~dp0
 cd /d "%DIR%"
 
+echo.
 echo ^>^> Installing build dependencies...
-pip install pyinstaller pyarmor pyarmor.cli 2>nul
+pip install pyinstaller
 
 echo.
-echo ^>^> Obfuscating source code with PyArmor...
-pyarmor gen --output obf_dist --recursive run.py Cloud_API.py database.py classification.py Postpartum.py maternal_fetal.py 2>nul
+echo ^>^> Installing required Python packages...
+pip install fastapi uvicorn passlib python-jose pydantic websockets python-multipart scikit-learn pandas numpy
 
 echo.
 echo ^>^> Building executable with PyInstaller...
-cd obf_dist
 pyinstaller --clean --noconfirm --onefile --windowed ^
   --name "OMS" ^
-  --add-data "../data;data" ^
+  --add-data "data;data" ^
   --hidden-import passlib.handlers.pbkdf2_sha256 ^
   --hidden-import passlib.handlers.sha2_crypt ^
   --hidden-import uvicorn ^
@@ -51,28 +51,38 @@ pyinstaller --clean --noconfirm --onefile --windowed ^
   --exclude-module matplotlib ^
   --exclude-module scipy ^
   --exclude-module PIL ^
-  --exclude-module cv2 ^
   run.py
 
 if %ERRORLEVEL% NEQ 0 (
     echo.
-    echo [ERROR] Build failed. Check the output above.
+    echo ====================================================
+    echo  BUILD FAILED!
+    echo  Check the error messages above.
+    echo ====================================================
+    echo.
+    echo  Common Windows fixes:
+    echo   1. Install Python from python.org (not Microsoft Store)
+    echo   2. Check "Add Python to PATH" during install
+    echo   3. Run Command Prompt as Administrator
+    echo   4. If numpy fails: pip install numpy --prefer-binary
+    echo.
     pause
     exit /b 1
 )
 
 echo.
-echo ^>^> Copying files to dist folder...
-cd "%DIR%"
+echo ^>^> Copying data files...
 if not exist "dist\data" mkdir "dist\data"
-xcopy /E /I /Y "data" "dist\data" 2>nul
-copy "start.bat" "dist\start.bat" 2>nul
-copy "README.txt" "dist\README.txt" 2>nul
+xcopy /E /I /Y "data" "dist\data"
+copy "start.bat" "dist\start.bat"
+copy "README.txt" "dist\README.txt"
 
 echo.
 echo ====================================================
 echo  BUILD COMPLETE!
 echo  Output: dist\OMS.exe
+echo  Size:
+dir "dist\OMS.exe"
 echo ====================================================
 echo.
 echo  Created by Karim Abdelaziz
