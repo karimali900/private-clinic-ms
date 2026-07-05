@@ -3,6 +3,14 @@
 
 from fpdf import FPDF
 import os
+from bidi.algorithm import get_display
+from arabic_reshaper import ArabicReshaper
+
+AR_CONFIG = {
+    'support_ligatures': False,
+    'use_unshaped_instead_of_isolated': False,
+}
+_reshner = ArabicReshaper(AR_CONFIG)
 
 DROID_KUFI = "/usr/share/fonts/paktype-naskh-basic-fonts/PakTypeNaskhBasic.ttf"
 DROID_KUFI_BOLD = "/usr/share/fonts/paktype-naskh-basic-fonts/PakTypeNaskhBasic.ttf"
@@ -92,6 +100,15 @@ class ArabicManual(FPDF):
         self.add_font("DroidKufi", "", DROID_KUFI)
         self.add_font("DroidKufi", "B", DROID_KUFI_BOLD)
         self.set_auto_page_break(auto=True, margin=20)
+
+    def _ar(self, text):
+        return get_display(_reshner.reshape(str(text)))
+
+    def cell(self, w, h=0, text="", **kwargs):
+        super().cell(w, h, self._ar(str(text)), **kwargs)
+
+    def multi_cell(self, w, h, text="", **kwargs):
+        super().multi_cell(w, h, self._ar(str(text)), **kwargs)
 
     def header(self):
         if self.page_no() > 1:
