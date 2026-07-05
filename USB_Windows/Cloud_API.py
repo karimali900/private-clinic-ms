@@ -1001,14 +1001,15 @@ tr:hover td{background:#1a1a3a}
       <div class="card" style="margin-top:1.2rem">
         <h3>BMI Calculator</h3>
         <div class="fields">
-          <label>Height (cm)</label><input id="bmiHeight" value="165" type="number" step="0.1">
-          <label>Weight (kg)</label><input id="bmiWeight" value="70" type="number" step="0.1">
+          <label>Height (cm)</label><input id="bmiHeight" value="165" type="number" step="0.1" oninput="calcBMI()">
+          <label>Weight (kg)</label><input id="bmiWeight" value="70" type="number" step="0.1" oninput="calcBMI()">
         </div>
-        <div class="row">
-          <button class="btn btn-primary btn-xs" onclick="calcBMI()">Calculate</button>
-          <span id="bmiResult" style="font-size:1.1rem;font-weight:700;color:#7c6ff0"></span>
+        <div style="display:flex;align-items:center;gap:1rem;margin-top:.6rem">
+          <span id="bmiResultDisplay" style="font-size:2rem;font-weight:800;color:#7c6ff0">--</span>
+          <span style="color:#555;font-size:.8rem">kg/m²</span>
+          <span id="bmiResult" style="display:none"></span>
         </div>
-        <div id="bmiCategory" style="margin-top:.4rem;font-size:.8rem"></div>
+        <div id="bmiCategory" style="margin-top:.4rem;font-size:.85rem"></div>
       </div>
     </div>
 
@@ -3222,32 +3223,34 @@ function calcBMI(){
   const hCm=+document.getElementById('bmiHeight').value;
   const w=+document.getElementById('bmiWeight').value;
   const h=hCm/100;
-  if(!h||!w){document.getElementById('bmiResult').textContent='';document.getElementById('bmiCategory').textContent='';return}
+  const display=document.getElementById('bmiResultDisplay');
+  const catDiv=document.getElementById('bmiCategory');
+  if(!h||!w){display.textContent='--';catDiv.innerHTML='';return}
   const bmi=w/(h*h);
   const idealMin=18.5*h*h, idealMax=24.9*h*h;
   let cat,color,advice,delta;
   if(bmi<18.5){
     cat='Underweight';color='#faa61a';
     delta=idealMin-w;
-    advice='<b>Gain '+(delta).toFixed(1)+' kg</b> to reach minimum healthy weight ('+idealMin.toFixed(1)+' kg). Increase caloric intake with nutrient-dense foods, add healthy fats, and consider strength training.'
+    advice='<b>Gain '+(delta).toFixed(1)+' kg</b> to reach minimum healthy weight ('+idealMin.toFixed(1)+' kg).';
   }else if(bmi<25){
     cat='Normal';color='#3ba55c';
-    delta=w-idealMin;
-    advice='Your weight is within the healthy range. Maintain with a balanced diet (veggies, lean protein, whole grains) and regular physical activity (150 min/week moderate exercise).'
+    advice='Your weight is within the healthy range. Maintain with balanced diet and regular exercise.';
   }else if(bmi<30){
     cat='Overweight';color='#faa61a';
     delta=w-idealMax;
-    advice='<b>Lose '+(delta).toFixed(1)+' kg</b> to reach maximum healthy weight ('+idealMax.toFixed(1)+' kg). Focus on portion control, reduce processed foods/sugar, and aim for 30 min daily aerobic activity.'
+    advice='<b>Lose '+(delta).toFixed(1)+' kg</b> to reach maximum healthy weight ('+idealMax.toFixed(1)+' kg).';
   }else{
     cat='Obese';color='#ed4245';
     delta=w-idealMax;
-    advice='<b>Lose '+(delta).toFixed(1)+' kg</b> to reach healthy range. Consult a healthcare provider for a personalized plan. Prioritize whole foods, avoid sugary drinks, and gradually increase physical activity.'
+    advice='<b>Lose '+(delta).toFixed(1)+' kg</b> to reach healthy range. Consult a healthcare provider.';
   }
-  document.getElementById('bmiResult').textContent=bmi.toFixed(1);
-  document.getElementById('bmiCategory').innerHTML=
+  display.textContent=bmi.toFixed(1);
+  display.style.color=color;
+  catDiv.innerHTML=
     '<div style="margin-top:.3rem"><span class="badge" style="background:'+color+'">'+cat+'</span></div>'+
-    '<div style="margin-top:.4rem;font-size:.8rem;color:#999">Ideal range: <b>'+idealMin.toFixed(1)+' – '+idealMax.toFixed(1)+' kg</b> for '+hCm.toFixed(0)+' cm</div>'+
-    '<div style="margin-top:.2rem;font-size:.8rem;color:#ccc">'+advice+'</div>';
+    '<div style="margin-top:.4rem;color:#999">Ideal range: <b>'+idealMin.toFixed(1)+' – '+idealMax.toFixed(1)+' kg</b> for '+hCm.toFixed(0)+' cm</div>'+
+    '<div style="margin-top:.2rem;color:#ccc;font-size:.8rem">'+advice+'</div>';
 }
 
 // ── Utilities ──
