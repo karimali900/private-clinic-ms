@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
+"""Fast entry point — creates venv on first run, starts uvicorn."""
 import os, sys, json, subprocess, venv, webbrowser, threading, time, socket
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+FLAG = os.path.join(SCRIPT_DIR, '.venv', '.installed')
+VENV_DIR = os.path.join(SCRIPT_DIR, '.venv')
 
 def eprint(msg): print(msg, file=sys.stderr)
 
@@ -12,85 +15,53 @@ def banner():
     print("  Maternity Care · Antenatal Visits · Follow-ups")
     print("=" * 55)
 
-def read_config():
-    import argparse
-    p = os.path.join(SCRIPT_DIR, "config.json")
-    config = {}
-    if os.path.exists(p):
-        try:
-            with open(p) as f: config = json.load(f)
-        except: pass
-    parser = argparse.ArgumentParser()
-    default_port = config.get("port", int(os.getenv("PORT", "5000")))
-    parser.add_argument("--port", type=int, default=default_port)
-    args, _ = parser.parse_known_args()
-    config["port"] = args.port
-    return config
-
-def find_free_port(start):
-    for p in range(start, start + 100):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            if s.connect_ex(('localhost', p)) != 0: return p
-    return start
-
-def check_python():
-    if sys.version_info < (3, 8):
-        banner()
-        eprint("\n  [ERROR] Python 3.8 or newer required")
-        eprint(f"  Found: Python {sys.version_info.major}.{sys.version_info.minor}")
-        eprint("  Download: https://www.python.org/downloads/\n")
-        sys.exit(1)
+def venv_python():
+    if sys.platform == 'win32':
+        return os.path.join(VENV_DIR, 'Scripts', 'python.exe')
+    return os.path.join(VENV_DIR, 'bin', 'python3')
 
 def is_venv():
     return sys.prefix != sys.base_prefix
 
-def venv_python_path(venv_dir):
-    return os.path.join(venv_dir, 'Scripts', 'python.exe') if sys.platform == 'win32' \
-        else os.path.join(venv_dir, 'bin', 'python3')
-
 def setup_venv():
     banner()
     print("\n  [1/2] Setting up environment...")
-    venv_dir = os.path.join(SCRIPT_DIR, '.venv')
-    flag = os.path.join(venv_dir, '.installed')
-    vp = venv_python_path(venv_dir)
-
-    if not os.path.exists(venv_dir):
+    vp = venv_python()
+    if not os.path.exists(VENV_DIR):
         print("  [ .. ] Creating virtual environment...")
-        venv.create(venv_dir, with_pip=True)
+        venv.create(VENV_DIR, with_pip=True)
         print("  [OK]  Virtual environment created.")
     else:
         print("  [OK]  Virtual environment found.")
-
     req = os.path.join(SCRIPT_DIR, 'requirements.txt')
-    if os.path.exists(req) and not os.path.exists(flag):
-        print("  [ .. ] Installing dependencies (first run)...\n")
+    if os.path.exists(req) and not os.path.exists(FLAG):
+        print("  [ .. ] Installing dependencies (first run, may take a few minutes)...\n")
         sys.stdout.flush()
-        r = subprocess.run([vp, '-m', 'pip', 'install', '-r', req, '--disable-pip-version-check', '-q'])
+        t0 = time.time()
+        r = subprocess.run([vp, '-m', 'pip', 'install', '-r', req,
+                           '--disable-pip-version-check', '-q'])
         if r.returncode == 0:
-            with open(flag, 'w') as f: f.write('done')
-            print("  [OK]  Dependencies installed.")
+            with open(FLAG, 'w') as f: f.write('done')
+            print(f"  [OK]  Dependencies installed ({time.time()-t0:.0f}s).")
         else:
-            eprint("  [WARN] Some packages failed to install.")
-            eprint("  Trying to start anyway...")
-
+            eprint("  [WARN] Some packages failed to install. Trying anyway...")
     return vp
 
 def start_server(port):
     url = f"http://localhost:{port}/dashboard"
-    print(f"\n  Opening: {url}")
-    print("  Press Ctrl+C to stop\n")
-
+    # Open browser early so user sees it faster
     def open_browser():
-        time.sleep(2)
+        time.sleep(1.5)
         try: webbrowser.open(url)
         except: pass
     threading.Thread(target=open_browser, daemon=True).start()
 
     os.chdir(SCRIPT_DIR)
+    sys.path.insert(0, SCRIPT_DIR)
     import uvicorn
     try:
-        uvicorn.run("Cloud_API:app", host="0.0.0.0", port=port, log_level="info")
+        uvicorn.run("Cloud_API:app", host="0.0.0.0", port=port,
+                    log_level="warning", access_log=False)
     except OSError as e:
         eprint(f"\n  [ERROR] {e}")
         eprint("  Try a different port in config.json\n")
@@ -99,20 +70,39 @@ def start_server(port):
         print("\n  Server stopped.")
 
 if __name__ == '__main__':
-    check_python()
+    # Quick Python check
+    if sys.version_info < (3, 8):
+        banner()
+        eprint("\n  [ERROR] Python 3.8+ required")
+        eprint(f"  Found: {sys.version_info.major}.{sys.version_info.minor}")
+        sys.exit(1)
 
+    # If not inside our venv, set it up and re-exec
     if not is_venv():
         vp = setup_venv()
-        print(f"  [INFO] Starting application...")
         os.execl(vp, vp, os.path.abspath(__file__), *sys.argv[1:])
 
-    config = read_config()
-    port = find_free_port(config.get("port", int(os.getenv("PORT", "5000"))))
-    configured = config.get("port", 5000)
-    if port != configured:
-        print(f"\n  [INFO] Port {configured} in use, using {port}")
-        print(f"  [INFO] Update config.json to {port} for persistence")
+    # We are inside the venv — start server
+    import argparse
+    config_path = os.path.join(SCRIPT_DIR, "config.json")
+    config = {}
+    if os.path.exists(config_path):
+        try:
+            with open(config_path) as f: config = json.load(f)
+        except: pass
+    parser = argparse.ArgumentParser()
+    default_port = config.get("port", int(os.getenv("PORT", "5000")))
+    parser.add_argument("--port", type=int, default=default_port)
+    args, _ = parser.parse_known_args()
+    port = args.port
+
+    # Find a free port
+    for p in range(port, port + 100):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            if s.connect_ex(('localhost', p)) != 0:
+                port = p
+                break
 
     banner()
-    print("\n  [OK]  Environment ready")
+    print(f"\n  [OK]  Starting on http://localhost:{port}/dashboard\n")
     start_server(port)

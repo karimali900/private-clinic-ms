@@ -5,12 +5,21 @@ echo   Obstetrics Management System
 echo   Maternity Ward . Labor & Delivery . Postnatal Care
 echo ====================================================
 echo.
-echo   created by Karim Abdelaziz — 00201029927276
+echo   Created by Karim Abdelaziz — 00201029927276
 echo.
-echo   Starting server...
-echo.
-start "" "%~dp0OMS.exe"
-echo   Opening browser...
-timeout /t 2 /nobreak >nul
+cd /d "%~dp0"
+
+REM Run compiled binary if present
+if exist "%~dp0OMS.exe" (
+    echo   Starting...
+    start "" "%~dp0OMS.exe"
+    timeout /t 2 /nobreak >nul
+    start http://localhost:5000/dashboard
+    exit
+)
+
+REM Source mode
+echo   Starting Python server...
+start "" python run.py
+timeout /t 3 /nobreak >nul
 start http://localhost:5000/dashboard
-exit
